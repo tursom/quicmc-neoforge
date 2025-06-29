@@ -4,6 +4,7 @@ plugins {
   id("java-library")
   id("maven-publish")
   id("net.neoforged.gradle.userdev") version "7.0.189"
+  id("com.gradleup.shadow") version "8.3.7"
 }
 
 tasks.named<Wrapper>("wrapper").configure {
@@ -33,7 +34,7 @@ val neo_version = property("neo_version")
 val neo_version_range = property("neo_version_range")
 val loader_version_range = property("loader_version_range")
 
-val nettyQuicVersion = "0.0.73.Final"
+val nettyQuicVersion = "0.0.72.Final"
 
 val libraries by configurations.creating
 
@@ -130,6 +131,8 @@ configurations {
   }
 }
 
+//jarJar.enable()
+
 dependencies {
   // Specify the version of Minecraft to use.
   // Depending on the plugin applied there are several options. We will assume you applied the userdev plugin as shown above.
@@ -164,9 +167,12 @@ dependencies {
   //annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
 
   // netty quic
-  libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:linux-x86_64")
-  libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:osx-x86_64")
-  libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:windows-x86_64")
+  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:linux-x86_64")
+  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:osx-x86_64")
+  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:windows-x86_64")
+  //jarJar("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:windows-x86_64")
+  //libraries("io.netty.incubator:netty-incubator-codec-classes-quic:$nettyQuicVersion")
+  //jarJar("io.netty.incubator:netty-incubator-codec-classes-quic:$nettyQuicVersion")
 
   // lombok
   val lombokVersion = "1.18.38"
@@ -225,4 +231,19 @@ idea {
     isDownloadSources = true
     isDownloadJavadoc = true
   }
+}
+
+tasks.shadowJar {
+  dependsOn(tasks.named("build"))
+
+  //archiveClassifier.set("shadow")
+
+  dependencies {
+    include(dependency("io.netty.incubator:"))
+    exclude(dependency("[^(io.netty.incubator)]:"))
+  }
+
+  relocate("io.netty.incubator", "cn.tursom.netty.incubator")
+
+  //minimize() // 移除未被使用的依赖
 }
