@@ -1,6 +1,5 @@
 package cn.tursom.quicmc.network;
 
-import cn.tursom.quicmc.netty.quic.*;
 import cn.tursom.quicmc.mixin.ConnectScreenAccessor;
 import cn.tursom.quicmc.mixin.ConnectionAccessor;
 import io.netty.bootstrap.Bootstrap;
@@ -9,6 +8,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.incubator.codec.quic.*;
 import io.netty.util.concurrent.Future;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

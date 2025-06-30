@@ -4,7 +4,6 @@ plugins {
   id("java-library")
   id("maven-publish")
   id("net.neoforged.gradle.userdev") version "7.0.189"
-  id("com.gradleup.shadow") version "8.3.7"
 }
 
 tasks.named<Wrapper>("wrapper").configure {
@@ -231,19 +230,4 @@ idea {
     isDownloadSources = true
     isDownloadJavadoc = true
   }
-}
-
-tasks.shadowJar {
-  dependsOn(tasks.named("build"))
-
-  //archiveClassifier.set("shadow")
-
-  dependencies {
-    include(dependency("io.netty.incubator:"))
-    exclude(dependency("[^(io.netty.incubator)]:"))
-  }
-
-  relocate("io.netty.incubator", "cn.tursom.netty.incubator")
-
-  //minimize() // 移除未被使用的依赖
 }
