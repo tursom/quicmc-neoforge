@@ -33,8 +33,6 @@ val neo_version = property("neo_version")
 val neo_version_range = property("neo_version_range")
 val loader_version_range = property("loader_version_range")
 
-val nettyQuicVersion = "0.0.72.Final"
-
 val libraries by configurations.creating
 
 version = mod_version
@@ -162,16 +160,6 @@ dependencies {
   // For more info:
   // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
   // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
-  //annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
-
-  // netty quic
-  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:linux-x86_64")
-  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:osx-x86_64")
-  //libraries("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:windows-x86_64")
-  //jarJar("io.netty.incubator:netty-incubator-codec-native-quic:$nettyQuicVersion:windows-x86_64")
-  //libraries("io.netty.incubator:netty-incubator-codec-classes-quic:$nettyQuicVersion")
-  //jarJar("io.netty.incubator:netty-incubator-codec-classes-quic:$nettyQuicVersion")
 
   // lombok
   val lombokVersion = "1.18.38"
