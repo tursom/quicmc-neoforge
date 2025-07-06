@@ -4,6 +4,7 @@ plugins {
   id("java-library")
   id("maven-publish")
   id("net.neoforged.gradle.userdev") version "7.0.189"
+  id("neoforge-gradle-kts")
 }
 
 tasks.named<Wrapper>("wrapper").configure {
@@ -15,207 +16,166 @@ tasks.named<Wrapper>("wrapper").configure {
   distributionType = Wrapper.DistributionType.BIN
 }
 
+allprojects {
+  apply(plugin = "java-library")
+  apply(plugin = "maven-publish")
+  apply(plugin = "net.neoforged.gradle.userdev")
+  apply(plugin = "neoforge-gradle-kts")
 
-fun property(name: String): String {
-  return project.findProperty(name) as? String ?: throw IllegalArgumentException("Property '$name' is not set.")
+  version = mod_version
+  group = mod_group_id
+
+  // Mojang ships Java 21 to end users starting in 1.20.5, so mods should target Java 21.
+  java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
-val mod_id = property("mod_id")
-val mod_name = property("mod_name")
-val mod_license = property("mod_license")
-val mod_version = property("mod_version")
-val mod_authors = property("mod_authors")
-val mod_description = property("mod_description")
-val mod_group_id = property("mod_group_id")
-val minecraft_version = property("minecraft_version")
-val minecraft_version_range = property("minecraft_version_range")
-val neo_version = property("neo_version")
-val neo_version_range = property("neo_version_range")
-val loader_version_range = property("loader_version_range")
+subprojects {
+  val libraries by configurations.creating
 
-val libraries by configurations.creating
+  base {
+    archivesName.set(mod_name)
+  }
 
-version = mod_version
-group = mod_group_id
+  //minecraft.accessTransformers.file rootProject.file("src/main/resources/META-INF/accesstransformer.cfg")
+  //minecraft.accessTransformers.entry public net.minecraft.client.Minecraft textureManager # textureManager
 
-repositories {
-  // Add here additional repositories if required by some of the dependencies below.
-}
+  // Default run configurations.
+  // These can be tweaked, removed, or duplicated as needed.
+  runs {
+    // applies to all the run configs below
+    configureEach {
+      // Recommended logging data for a userdev environment
+      // The markers can be added/remove as needed separated by commas.
+      // "SCAN": For mods scan.
+      // "REGISTRIES": For firing of registry events.
+      // "REGISTRYDUMP": For getting the contents of all registries.
+      systemProperty("forge.logging.markers", "REGISTRIES")
 
-base {
-  archivesName.set(mod_name)
-}
+      // Recommended logging level for the console
+      // You can set various levels here.
+      // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+      systemProperty("forge.logging.console.level", "debug")
 
-// Mojang ships Java 21 to end users starting in 1.20.5, so mods should target Java 21.
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+      modSource(project.sourceSets.main.get())
 
-//minecraft.accessTransformers.file rootProject.file("src/main/resources/META-INF/accesstransformer.cfg")
-//minecraft.accessTransformers.entry public net.minecraft.client.Minecraft textureManager # textureManager
+      dependencies {
+        runtime(project.configurations.getByName("libraries"))
+      }
+    }
 
-// Default run configurations.
-// These can be tweaked, removed, or duplicated as needed.
-runs {
-  // applies to all the run configs below
-  configureEach {
-    // Recommended logging data for a userdev environment
-    // The markers can be added/remove as needed separated by commas.
-    // "SCAN": For mods scan.
-    // "REGISTRIES": For firing of registry events.
-    // "REGISTRYDUMP": For getting the contents of all registries.
-    systemProperty("forge.logging.markers", "REGISTRIES")
+    create("client") {
+      // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+      systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
+    }
 
-    // Recommended logging level for the console
-    // You can set various levels here.
-    // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-    systemProperty("forge.logging.console.level", "debug")
+    create("server") {
+      systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
+      argument("--nogui")
+    }
 
-    modSource(project.sourceSets.main.get())
+    // This run config launches GameTestServer and runs all registered gametests, then exits.
+    // By default, the server will crash when no gametests are provided.
+    // The gametest system is also enabled by default for other run configs under the /test command.
+    create("gameTestServer") {
+      systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
+    }
 
-    dependencies {
-      runtime(project.configurations.getByName("libraries"))
+    create("data") {
+      // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
+      // workingDirectory project.file("run-data")
+
+      // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+      arguments.addAll(
+        "--mod", mod_id,
+        "--all",
+        "--output", file("src/generated/resources/").getAbsolutePath(),
+        "--existing", file("src/main/resources/").getAbsolutePath(),
+      )
     }
   }
 
-  create("client") {
-    // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-    systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
+  // Include resources generated by data generators.
+  sourceSets {
+    main {
+      resources { srcDir("src/generated/resources") }
+    }
   }
 
-  create("server") {
-    systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
-    argument("--nogui")
+  // Sets up a dependency configuration called "localRuntime".
+  // This configuration should be used instead of "runtimeOnly" to declare
+  // a dependency that will be present for runtime testing but that is
+  // "optional", meaning it will not be pulled by dependents of this mod.
+  configurations {
+    runtimeClasspath.get().extendsFrom(localRuntime.get())
+
+    // 确保所有添加到 libraries 配置的依赖也会被添加到 implementation 配置
+    // 这样只需要声明一次依赖即可同时用于运行时和编译时
+    implementation {
+      extendsFrom(libraries)
+    }
   }
 
-  // This run config launches GameTestServer and runs all registered gametests, then exits.
-  // By default, the server will crash when no gametests are provided.
-  // The gametest system is also enabled by default for other run configs under the /test command.
-  create("gameTestServer") {
-    systemProperty("neoforge.enabledGameTestNamespaces", mod_id)
+  //jarJar.enable()
+
+  dependencies {
+    implementation("net.neoforged:neoforge:${neo_version}")
+
+    // lombok
+    val lombokVersion = "1.18.38"
+    compileOnly("org.projectlombok", "lombok", lombokVersion)
+    annotationProcessor("org.projectlombok", "lombok", lombokVersion)
+    testCompileOnly("org.projectlombok", "lombok", lombokVersion)
+    testAnnotationProcessor("org.projectlombok", "lombok", lombokVersion)
   }
 
-  create("data") {
-    // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
-    // workingDirectory project.file("run-data")
-
-    // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-    arguments.addAll(
-      "--mod", mod_id,
-      "--all",
-      "--output", file("src/generated/resources/").getAbsolutePath(),
-      "--existing", file("src/main/resources/").getAbsolutePath(),
+  // This block of code expands all declared replace properties in the specified resource targets.
+  // A missing property will result in an error. Properties are expanded using ${} Groovy notation.
+  // When "copyIdeResources" is enabled, this will also run before the game launches in IDE environments.
+  // See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
+  tasks.withType<ProcessResources>().configureEach {
+    var replaceProperties = mapOf(
+      "minecraft_version" to minecraft_version,
+      "minecraft_version_range" to minecraft_version_range,
+      "neo_version" to neo_version,
+      "neo_version_range" to neo_version_range,
+      "loader_version_range" to loader_version_range,
+      "mod_id" to mod_id,
+      "mod_name" to mod_name,
+      "mod_license" to mod_license,
+      "mod_version" to mod_version,
+      "mod_authors" to mod_authors,
+      "mod_description" to mod_description,
     )
-  }
-}
+    inputs.properties(replaceProperties)
 
-// Include resources generated by data generators.
-sourceSets {
-  main {
-    resources { srcDir("src/generated/resources") }
-  }
-}
-
-// Sets up a dependency configuration called "localRuntime".
-// This configuration should be used instead of "runtimeOnly" to declare
-// a dependency that will be present for runtime testing but that is
-// "optional", meaning it will not be pulled by dependents of this mod.
-configurations {
-  runtimeClasspath.get().extendsFrom(localRuntime.get())
-
-  // 确保所有添加到 libraries 配置的依赖也会被添加到 implementation 配置
-  // 这样只需要声明一次依赖即可同时用于运行时和编译时
-  implementation {
-    extendsFrom(libraries)
-  }
-}
-
-//jarJar.enable()
-
-dependencies {
-  // Specify the version of Minecraft to use.
-  // Depending on the plugin applied there are several options. We will assume you applied the userdev plugin as shown above.
-  // The group for userdev is net.neoforged, the module name is neoforge, and the version is the same as the neoforge version.
-  // You can however also use the vanilla plugin (net.neoforged.gradle.vanilla) to use a version of Minecraft without the neoforge loader.
-  // And its provides the option to then use net.minecraft as the group, and one of; client, server or joined as the module name, plus the game version as version.
-  // For all intends and purposes: You can treat this dependency as if it is a normal library you would use.
-  implementation("net.neoforged:neoforge:${neo_version}")
-
-  // Example optional mod dependency with JEI
-  // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-  // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-  // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-  // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-  // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
-
-  // Example mod dependency using a mod jar from ./libs with a flat dir repository
-  // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-  // The group id is ignored when searching -- in this case, it is "blank"
-  // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
-
-  // Example mod dependency using a file as dependency
-  // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
-
-  // Example project dependency using a sister or child project:
-  // implementation project(":myproject")
-
-  // For more info:
-  // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-  // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
-  // lombok
-  val lombokVersion = "1.18.38"
-  compileOnly("org.projectlombok", "lombok", lombokVersion)
-  annotationProcessor("org.projectlombok", "lombok", lombokVersion)
-  testCompileOnly("org.projectlombok", "lombok", lombokVersion)
-  testAnnotationProcessor("org.projectlombok", "lombok", lombokVersion)
-}
-
-// This block of code expands all declared replace properties in the specified resource targets.
-// A missing property will result in an error. Properties are expanded using ${} Groovy notation.
-// When "copyIdeResources" is enabled, this will also run before the game launches in IDE environments.
-// See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
-tasks.withType<ProcessResources>().configureEach {
-  var replaceProperties = mapOf(
-    "minecraft_version" to minecraft_version,
-    "minecraft_version_range" to minecraft_version_range,
-    "neo_version" to neo_version,
-    "neo_version_range" to neo_version_range,
-    "loader_version_range" to loader_version_range,
-    "mod_id" to mod_id,
-    "mod_name" to mod_name,
-    "mod_license" to mod_license,
-    "mod_version" to mod_version,
-    "mod_authors" to mod_authors,
-    "mod_description" to mod_description,
-  )
-  inputs.properties(replaceProperties)
-
-  filesMatching(listOf("META-INF/neoforge.mods.toml")) {
-    expand(replaceProperties)
-  }
-}
-
-// Example configuration to allow publishing using the maven-publish plugin
-publishing {
-  publications {
-    register<MavenPublication>("mavenJava") {
-      from(components["java"])
+    filesMatching(listOf("META-INF/neoforge.mods.toml")) {
+      expand(replaceProperties)
     }
   }
-  repositories {
-    maven {
-      url = uri("file://${project.projectDir}/repo")
+
+  // Example configuration to allow publishing using the maven-publish plugin
+  publishing {
+    publications {
+      register<MavenPublication>("mavenJava") {
+        from(components["java"])
+      }
+    }
+    repositories {
+      maven {
+        url = uri("file://${project.projectDir}/repo")
+      }
     }
   }
-}
 
-tasks.withType<JavaCompile>().configureEach {
-  options.encoding = "UTF-8" // Use the UTF-8 charset for Java compilation
-}
+  tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8" // Use the UTF-8 charset for Java compilation
+  }
 
-// IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
-idea {
-  module {
-    isDownloadSources = true
-    isDownloadJavadoc = true
+  // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
+  idea {
+    module {
+      isDownloadSources = true
+      isDownloadJavadoc = true
+    }
   }
 }

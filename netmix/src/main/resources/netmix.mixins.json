@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cn.tursom.netmix.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ConnectScreenMixin",
+    "ServerAddressMixin",
+    "ServerStatusPingerMixin",
+    "ConnectScreenAccessor",
+    "ConnectionAccessor"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
