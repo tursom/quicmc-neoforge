@@ -1,0 +1,60 @@
+name: Build and Save JARs
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 设置 Java 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 缓存 Gradle
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle
+
+      # 构建项目
+      - name: Build with Gradle
+        run: bash gradlew build
+
+      # 保存 jar 包
+      - name: Save JARs
+        run: |
+          mkdir -p jars
+          cp netmix/build/libs/*.jar jars/
+          cp quicmc/build/libs/*.jar jars/
+          cp ws/build/libs/*.jar jars/
+          # 重命名去掉 -all 后缀
+          for file in jars/*-all.jar; do
+            if [ -f "$file" ]; then
+              mv "$file" "${file%-all.jar}.jar"
+            fi
+          done
+        shell: bash
+
+      # 上传 jar 包到 GitHub Actions 的工件
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-jars
+          path: jars
