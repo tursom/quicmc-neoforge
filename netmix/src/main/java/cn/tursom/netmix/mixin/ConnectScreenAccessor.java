@@ -3,8 +3,6 @@ package cn.tursom.netmix.mixin;
 import io.netty.channel.ChannelFuture;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.resources.server.ServerPackManager;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
@@ -16,11 +14,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface ConnectScreenAccessor {
     @Accessor("LOGGER")
     static Logger getLogger() {
-        throw new AssertionError();
-    }
-
-    @Accessor("ABORT_CONNECTION")
-    static Component getAbortConnection() {
         throw new AssertionError();
     }
 

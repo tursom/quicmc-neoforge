@@ -38,22 +38,4 @@ public class ServerStatusPingerMixin {
 
         return protocol.connectToServer(serverData, address, useEpollIfAvailable, sampleLogger);
     }
-
-    //@Inject(method = "pingServer",
-    //        at = @At(value = "INVOKE",
-    //                target = "Lnet/minecraft/network/Connection;connectToServer(Ljava/net/InetSocketAddress;Z)Lnet/minecraft/network/Connection;",
-    //                shift = At.Shift.BEFORE)
-    //)
-    //private void beforeConnectToServer(ServerData serverData, Runnable runnable, CallbackInfo ci) {
-    //    CURRENT_SERVER.set(serverData);
-    //}
-    //
-    //@Inject(method = "pingServer",
-    //        at = @At(value = "INVOKE",
-    //                target = "Lnet/minecraft/network/Connection;connectToServer(Ljava/net/InetSocketAddress;Z)Lnet/minecraft/network/Connection;",
-    //                shift = At.Shift.AFTER)
-    //)
-    //private void afterConnectToServer(ServerData serverData, Runnable runnable, CallbackInfo ci) {
-    //    CURRENT_SERVER.remove();
-    //}
 }
